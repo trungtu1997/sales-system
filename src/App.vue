@@ -13,11 +13,15 @@
 
     <div class="main-layout">
       <aside class="sidebar">
-        <!-- menu -->
+        <ul>
+          <li @click="$router.push('/')">Dashboard</li>
+          <li @click="$router.push('/products')">Sản Phẩm</li>
+          <!-- menu khác, v-if admin cho Báo Cáo -->
+        </ul>
       </aside>
 
       <main class="content">
-        <!-- nội dung module -->
+        <router-view></router-view>  // Trang sẽ load ở đây
       </main>
     </div>
   </div>
