@@ -16,7 +16,7 @@
         <button @click="openForm()" class="btn btn-primary">
           <span class="icon">➕</span> Thêm sản phẩm
         </button>
-        <button class="btn btn-white">
+        <button class="btn btn-white" @click="exportToExcel">
           <span class="icon">📊</span> Xuất Excel
         </button>
       </div>
@@ -116,7 +116,7 @@
           <tr v-for="product in paginatedProducts" :key="product.id">
             <td><input type="checkbox" /></td>
             <td>
-               <span class="sku-tag">{{ product.sku || ('SP' + product.id) }}</span>
+               <span class="sku-tag">{{ product.sku || '---' }}</span>
             </td>
             <td>
               <div class="product-info-cell">
@@ -125,7 +125,6 @@
                 </div>
                 <div class="product-details">
                     <span class="product-name-text">{{ product.name }}</span>
-                    <span class="product-slug-text">/{{ product.slug }}</span>
                 </div>
               </div>
             </td>
@@ -142,7 +141,7 @@
             <td class="font-bold text-primary">{{ formatPrice(product.retail_price) }}</td>
             <td class="text-secondary">{{ formatPrice(product.wholesale_price) }}</td>
             <td class="actions text-right">
-              <button class="action-btn view" @click="openView(product)" title="Xem chi tiết">
+              <button class="action-btn view" @click="openViewModal(product)" title="Xem chi tiết">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
               </button>
               <button class="action-btn edit" @click="openForm(product)" title="Chỉnh sửa">
@@ -284,6 +283,10 @@
                         <label>Giá sỉ</label>
                         <input v-model.number="variant.wholesale_price" type="number" placeholder="0" class="form-input" />
                       </div>
+                      <div class="input-group">
+                        <label>Ảnh URL</label>
+                        <input v-model="variant.image_url" placeholder="Link ảnh..." class="form-input" />
+                      </div>
                    </div>
                    
                    <div class="attributes-container">
@@ -305,6 +308,49 @@
             <button type="submit" class="btn-save">Lưu Sản Phẩm</button>
           </div>
         </form>
+      </div>
+    </div>
+    <div v-if="showViewModal" class="modal-overlay" @click="showViewModal = false">
+      <div class="view-modal-card" @click.stop>
+         <button class="btn-close-view" @click="showViewModal = false">×</button>
+         <div class="view-body">
+            <div class="view-left">
+                <div class="main-image-container">
+                     <img :src="currentMainImage" class="main-image">
+                </div>
+                <div class="gallery-list">
+                    <div v-for="(img, idx) in allImages" :key="idx" class="thumb-item" 
+                        :class="{ active: currentMainImage === img }" @click="setActiveImage(img)">
+                        <img :src="img" />
+                    </div>
+                </div>
+            </div>
+            <div class="view-right">
+                <h2 class="view-title">{{ viewingProduct.name }}</h2>
+                <div class="view-meta">
+                    <span class="view-sku">SKU: {{ selectedVariantSKU || viewingProduct.sku || 'N/A' }}</span>
+                    <span class="view-status" :class="viewingProduct.total_stock > 0 ? 'in-stock' : 'out-stock'">
+                        {{ viewingProduct.total_stock > 0 ? 'Còn hàng' : 'Hết hàng' }}
+                    </span>
+                </div>
+                <div class="view-price">
+                    {{ formatPrice(selectedVariantPrice || viewingProduct.retail_price) }}
+                </div>
+                <div class="view-variants" v-if="viewingVariants.length > 0">
+                    <label>Phân loại:</label>
+                    <div class="variant-pills">
+                        <button v-for="(v, index) in viewingVariants" :key="index"
+                            class="variant-pill" :class="{ active: selectedVariantIndex === index }"
+                            @click="selectVariant(index)">
+                            {{ v.variant_name }}
+                        </button>
+                    </div>
+                </div>
+                <div class="view-extra-info">
+                    <p><strong>Danh mục:</strong> {{ getCategoryName(viewingProduct.category_id) }}</p>
+                </div>
+            </div>
+         </div>
       </div>
     </div>
   </div>
@@ -340,7 +386,13 @@ export default {
         is_for_sale: true,
         variants: []
       },
-      role: 'staff'
+      role: 'staff',
+      showViewModal: false,
+      viewingProduct: {},
+      viewingVariants: [],
+      galleryImages: [],
+      selectedVariantIndex: -1,
+      activeImage: ''
     }
   },
   
@@ -369,6 +421,31 @@ export default {
         
         return matchesSearch && matchesCategory && matchesStatus;
       })
+    },
+    // Thêm các computed mới:
+    selectedVariantPrice() {
+        if (this.selectedVariantIndex !== -1 && this.viewingVariants[this.selectedVariantIndex]) 
+            return this.viewingVariants[this.selectedVariantIndex].retail_price;
+        return this.viewingProduct.retail_price;
+    },
+    selectedVariantSKU() {
+        if (this.selectedVariantIndex !== -1 && this.viewingVariants[this.selectedVariantIndex]) 
+            return this.viewingVariants[this.selectedVariantIndex].sku;
+        return this.viewingProduct.sku;
+    },
+    currentMainImage() {
+        if (this.activeImage) return this.activeImage;
+        if (this.selectedVariantIndex !== -1 && this.viewingVariants[this.selectedVariantIndex]?.image_url) {
+            return this.viewingVariants[this.selectedVariantIndex].image_url;
+        }
+        return this.viewingProduct.image_url || 'https://via.placeholder.com/500x500?text=No+Image';
+    },
+    allImages() {
+        const imgs = [];
+        if (this.viewingProduct.image_url) imgs.push(this.viewingProduct.image_url);
+        this.viewingVariants.forEach(v => { if(v.image_url) imgs.push(v.image_url) });
+        this.galleryImages.forEach(g => { if(g.image_url) imgs.push(g.image_url) });
+        return [...new Set(imgs)];
     },
     // Logic phân trang
     paginatedProducts() {
@@ -404,6 +481,36 @@ export default {
       } else {
         this.products = data || [];
       }
+    },
+
+    // 1. Hàm Xuất Excel
+    exportToExcel() {
+      const data = this.products.map(p => ({
+          'SKU': p.sku, 'Tên': p.name, 'Giá': p.retail_price, 'Tồn': p.total_stock
+      }));
+      const ws = XLSX.utils.json_to_sheet(data);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "SP");
+      XLSX.writeFile(wb, "San_Pham.xlsx");
+    },
+
+    // 2. Hàm Mở Modal Xem Chi Tiết
+    async openViewModal(product) {
+        this.viewingProduct = product;
+        this.selectedVariantIndex = -1;
+        this.activeImage = ''; 
+        const { data: vData } = await supabase.from('product_variants').select('*').eq('product_id', product.id);
+        this.viewingVariants = vData || [];
+        const { data: gData } = await supabase.from('product_images').select('*').eq('product_id', product.id);
+        this.galleryImages = gData || [];
+        this.showViewModal = true;
+    },
+    selectVariant(index) {
+        this.selectedVariantIndex = index;
+        this.activeImage = ''; 
+    },
+    setActiveImage(img) {
+        this.activeImage = img;
     },
 
     async loadCategories() {
@@ -484,7 +591,8 @@ export default {
         retail_price: 0, 
         wholesale_price: 0, 
         stock_alert: 5, 
-        attributes: []
+        attributes: [],
+        image_url: '' // Thêm mới
       });
     },
 
@@ -508,6 +616,15 @@ export default {
     async saveProduct() {
       let productId;
       try {
+        // THÊM ĐOẠN TÍNH TOÁN NÀY VÀO ĐẦU HÀM TRY
+        let calcStock = 0, minPrice = 0, mainSKU = '', mainImage = '';
+        if (this.form.variants.length > 0) {
+            calcStock = this.form.variants.reduce((sum, v) => sum + (Number(v.quantity) || 0), 0);
+            const prices = this.form.variants.map(v => Number(v.retail_price)).filter(p => p > 0);
+            minPrice = prices.length > 0 ? Math.min(...prices) : 0;
+            mainSKU = this.form.variants[0].sku;
+            mainImage = this.form.variants[0].image_url;
+        }
         // BƯỚC A: TÍNH TOÁN DỮ LIỆU TỔNG HỢP
         let calculatedStock = 0;
         let mainRetailPrice = 0;
@@ -538,11 +655,13 @@ export default {
             product_type: this.form.product_type,
             is_for_sale: this.form.is_for_sale,
             
-            // Cập nhật các cột tổng hợp
+            // Cập nhật các cột tổng hợp (Chỉ khai báo 1 lần)
             total_stock: calculatedStock,
             retail_price: mainRetailPrice,
             cost_price: mainCostPrice,
-            wholesale_price: mainWholesalePrice
+            wholesale_price: mainWholesalePrice,
+            sku: mainSKU,
+            image_url: mainImage
         };
 
         // BƯỚC C: INSERT HOẶC UPDATE BẢNG CHA
@@ -1150,4 +1269,24 @@ export default {
   .variant-grid { grid-template-columns: 1fr; }
   .modal-card { width: 100%; height: 100vh; max-width: 100%; border-radius: 0; }
 }
+/* VIEW MODAL STYLES */
+.view-modal-card { background: white; width: 900px; max-width: 95%; max-height: 90vh; border-radius: 0; overflow-y: auto; position: relative; }
+.btn-close-view { position: absolute; top: 15px; right: 20px; border: none; background: none; font-size: 30px; cursor: pointer; z-index: 10; }
+.view-body { display: flex; padding: 40px; gap: 40px; }
+.view-left { flex: 1; }
+.view-right { flex: 1; }
+.main-image-container { width: 100%; padding-top: 100%; position: relative; background: #f9f9f9; border: 1px solid #eee; margin-bottom: 10px; }
+.main-image { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain; }
+.gallery-list { display: flex; gap: 10px; overflow-x: auto; }
+.thumb-item { width: 60px; height: 60px; border: 1px solid #eee; cursor: pointer; }
+.thumb-item.active { border-color: #333; }
+.thumb-item img { width: 100%; height: 100%; object-fit: cover; }
+.view-title { font-size: 24px; font-weight: 700; margin-bottom: 10px; }
+.view-price { font-size: 28px; font-weight: 700; color: #333; margin-bottom: 20px; }
+.variant-pills { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+.variant-pill { padding: 8px 16px; border: 1px solid #ddd; background: white; cursor: pointer; }
+.variant-pill.active { background: #333; color: white; border-color: #333; }
+.view-status.in-stock { color: green; font-weight: bold; }
+.view-status.out-stock { color: red; font-weight: bold; }
+.product-thumb-img { width: 45px; height: 45px; object-fit: cover; border-radius: 4px; border: 1px solid #eee; }
 </style>
