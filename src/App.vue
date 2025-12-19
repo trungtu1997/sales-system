@@ -21,7 +21,7 @@
       </aside>
 
       <main class="content">
-        <router-view></router-view>  // Trang sẽ load ở đây
+        <router-view></router-view>
       </main>
     </div>
   </div>
