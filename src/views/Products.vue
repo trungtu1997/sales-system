@@ -876,9 +876,11 @@ handleImageError(product) {
 
 .products-page {
   padding: 32px 40px;
+  max-width: 1100px;
   background-color: #ffffff;
   min-height: 100vh;
   color: #1f2937;
+  margin: auto;
 }
 .products-page ::placeholder, .products-page select {
   font-family: 'Quicksand',-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
