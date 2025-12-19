@@ -114,8 +114,17 @@
             </td>
             <td>
               <div class="product-info-cell">
-                <div class="product-avatar mono-avatar">
-                   {{ product.name ? product.name.charAt(0).toUpperCase() : 'P' }}
+                <div class="product-avatar">
+                  <img 
+                    v-if="getProductImage(product)" 
+                    :src="getProductImage(product)" 
+                    alt="Product image" 
+                    class="product-img"
+                    @error="handleImageError(product)"
+                  />
+                  <div v-else class="mono-avatar">
+                    {{ product.name ? product.name.charAt(0).toUpperCase() : 'P' }}
+                  </div>
                 </div>
                 <div class="product-details">
                     <span class="product-name-text">{{ product.name }}</span>
@@ -131,7 +140,7 @@
                 {{ product.total_stock || 0 }}
               </span>
             </td>
-            <td v-if="role === 'admin'">{{ formatPrice(product.cost_price) }}</td>
+            <td v-if="role === 'admin'">{{ getDisplayCostPrice(product) }}</td>
             
             <td class="font-bold">
                 {{ getDisplayPrice(product) }}
@@ -440,16 +449,6 @@
                         </div>
                     </div>
                 </div>
-
-                <div class="view-actions">
-                    <div class="qty-control">
-                        <button>-</button>
-                        <input value="1" readonly>
-                        <button>+</button>
-                    </div>
-                    <button class="btn-add-cart">ADD TO CART</button>
-                    <button class="btn-wishlist">♡</button>
-                </div>
             </div>
          </div>
       </div>
@@ -562,7 +561,7 @@ export default {
     async loadProducts() {
       const { data, error } = await supabase
         .from('products')
-        .select('*, product_variants(retail_price)') 
+        .select('*, product_variants(retail_price, cost_price, image_url)') 
         .order('id', { ascending: false });
 
       if (error) console.error('Lỗi load sản phẩm:', error);
@@ -574,6 +573,49 @@ export default {
         if (status === 'draft') return 'Nháp';
         if (status === 'inactive') return 'Ngừng bán';
         return 'Không xác định'; // phòng trường hợp 0 hoặc giá trị lạ
+    },
+
+    // Lấy ảnh ưu tiên: biến thể có ảnh đầu tiên → ảnh chính sản phẩm → null (fallback chữ cái)
+getProductImage(product) {
+  // Ưu tiên ảnh từ biến thể (nếu có biến thể và có image_url)
+  if (product.product_variants && product.product_variants.length > 0) {
+    const variantWithImage = product.product_variants.find(v => v.image_url && v.image_url.trim() !== '');
+    if (variantWithImage) return variantWithImage.image_url;
+  }
+
+  // Nếu không có ảnh biến thể → dùng ảnh chính của sản phẩm (nếu có trường image_url)
+  if (product.image_url && product.image_url.trim() !== '') {
+    return product.image_url;
+  }
+
+  // Không có ảnh nào → trả về null để fallback chữ cái
+  return null;
+},
+
+// Xử lý khi ảnh load lỗi (hỏng link) → fallback về chữ cái
+handleImageError(product) {
+  // Không cần làm gì phức tạp, Vue sẽ tự hidden <img> vì src null
+  // Có thể log nếu muốn: console.warn('Image load failed:', product.name);
+},
+
+    // Hiển thị giá nhập Min - Max (chỉ admin thấy)
+    getDisplayCostPrice(product) {
+      if (!product.product_variants || product.product_variants.length === 0) {
+        return this.formatPrice(product.cost_price || 0);
+      }
+
+      const costs = product.product_variants
+        .map(v => Number(v.cost_price))
+        .filter(c => c > 0);
+
+      if (costs.length === 0) return this.formatPrice(product.cost_price || 0);
+      if (costs.length === 1) return this.formatPrice(costs[0]);
+
+      const min = Math.min(...costs);
+      const max = Math.max(...costs);
+      if (min === max) return this.formatPrice(min);
+
+      return `${this.formatPrice(min)} - ${this.formatPrice(max)}`;
     },
 
     // Hiển thị giá Min - Max
@@ -936,6 +978,12 @@ export default {
   box-shadow: 0 1px 3px rgba(0,0,0,0.05);
 }
 
+.stat-card:hover {
+    transform: translateY(-5px);
+    transition: 0.5s;
+    background: #fbfbfb;
+}
+
 .stat-icon-wrapper.mono {
   width: 48px;
   height: 48px;
@@ -1016,17 +1064,13 @@ export default {
   border-bottom: 1px solid #f3f4f6;
 }
 
+.product-table tr:hover {
+    background: #f7f7f7;
+}
+
 /* Avatar Cell */
 .product-info-cell { display: flex; align-items: center; gap: 12px; }
-.product-avatar.mono-avatar {
-  width: 40px; height: 40px;
-  border-radius: 50%;
-  background: #f3f4f6;
-  color: #000;
-  border: 1px solid #e5e7eb;
-  display: flex; align-items: center; justify-content: center;
-  font-weight: 700; font-size: 16px;
-}
+
 .product-name-text { font-weight: 600; color: #111827; }
 
 /* Badges & Actions */
@@ -1240,6 +1284,33 @@ export default {
 }
 .size-box:hover { border-color: #999; }
 .size-box.selected { background: #000; color: white; border-color: #000; }
+
+.product-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 1px solid #e5e7eb;
+  flex-shrink: 0;
+}
+
+.product-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover; /* Ảnh fill đẹp, không bị méo */
+}
+
+.product-avatar .mono-avatar {
+  width: 100%;
+  height: 100%;
+  background: #f3f4f6;
+  color: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 16px;
+}
 
 .view-actions { display: flex; gap: 15px; margin-top: auto; padding-top: 20px; }
 .qty-control { display: flex; border: 1px solid #e5e5e5; height: 48px; }
