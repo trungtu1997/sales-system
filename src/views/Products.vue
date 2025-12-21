@@ -11,7 +11,10 @@
       </div>
       <div class="header-actions">
         <button @click="openForm()" class="btn btn-black">
-          <span class="icon">➕</span> Thêm sản phẩm
+          <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 20px; height: 20px;">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg></span> Thêm sản phẩm
         </button>
         <button class="btn btn-white" @click="exportToExcel">
           <i class="fas fa-file-excel" style="color: #107c41; margin-right: 8px;"></i> Xuất Excel
@@ -44,7 +47,11 @@
 
       <div class="stat-card">
         <div class="stat-icon-wrapper mono">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="8" x2="12" y2="12"></line>
+            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+          </svg>
         </div>
         <div class="stat-content">
           <span class="stat-label">Hết hàng</span>
@@ -881,6 +888,7 @@ handleImageError(product) {
   min-height: 100vh;
   color: #1f2937;
   margin: auto;
+  border-radius: 10px;
 }
 .products-page ::placeholder, .products-page select {
   font-family: 'Quicksand',-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -993,8 +1001,8 @@ handleImageError(product) {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #f3f4f6; /* Xám nhạt */
-  color: #000;
+  background: #ffb300; /* Xám nhạt */
+  color: #ffffff;
 }
 .stat-icon-wrapper svg { width: 24px; height: 24px; }
 
