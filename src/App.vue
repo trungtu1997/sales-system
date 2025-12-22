@@ -23,6 +23,9 @@
           <li :class="{ active: $route.path === '/products' }" @click="$router.push('/products')" data-tooltip="Products">
             <i class='bx bx-shopping-bag'></i>
           </li>
+          <li :class="{ active: $route.path === '/users' }" @click="$router.push('/users')" data-tooltip="Users">
+            <i class='bx bx-user'></i>
+          </li>
           <li data-tooltip="Messages">
             <i class='bx bx-envelope'></i>
           </li>
@@ -93,6 +96,7 @@ export default {
       if (this.$route.path === '/products') return 'Quản Lý Sản Phẩm';
       if (this.$route.path === '/categories') return 'Quản Lý Danh Mục';
       if (this.$route.path === '/brands') return 'Quản Lý Thương Hiệu';
+      if (this.$route.path === '/users') return 'Quản Lý Nhân Viên';
       return 'Trang Quản Trị';
     }
   },

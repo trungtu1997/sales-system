@@ -60,21 +60,58 @@ export default {
     return {
       email: '',
       password: '',
-      message: ''
+      message: '',
+      loading: false
     }
   },
   methods: {
     async login() {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: this.email,
-        password: this.password
-      })
+      this.loading = true;
+      this.message = '';
 
-      if (error) {
-        this.message = 'Lỗi: ' + error.message
-      } else {
-        this.message = ''
-        this.$emit('logged-in', data.user)  // chỉ emit user lên App.vue cha
+      try {
+        // 1. Đăng nhập Auth
+        const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+          email: this.email,
+          password: this.password
+        });
+
+        if (authError) throw authError;
+
+        // 2. Lấy thông tin Profile (Quan trọng: Lấy Role)
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', authData.user.id)
+          .single();
+        
+        // Nếu không lấy được profile (do lỗi mạng hoặc db), ta vẫn cho login nhưng cảnh báo
+        if (profileError) {
+            console.warn("Chưa tải được hồ sơ chi tiết:", profileError);
+        }
+
+        // 3. Gộp thông tin
+        const currentUser = {
+            ...authData.user,
+            user_metadata: {
+                ...authData.user.user_metadata,
+                ...(profileData || { role: 'staff', full_name: 'Unknown' }) // Fallback nếu lỗi
+            }
+        };
+
+        // 4. Emit lên App cha
+        this.$emit('logged-in', currentUser);
+
+      } catch (error) {
+        console.error(error);
+        this.message = error.message;
+        if (error.message.includes("Invalid login")) {
+            this.message = "Sai email hoặc mật khẩu!";
+        } else if (error.status === 500) {
+            this.message = "Lỗi hệ thống (500). Vui lòng báo Admin kiểm tra Database Trigger.";
+        }
+      } finally {
+        this.loading = false;
       }
     }
   }
