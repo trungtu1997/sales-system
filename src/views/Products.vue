@@ -1111,7 +1111,7 @@ handleImageError(product) {
 .btn-page-nav, .page-number {
   width: 40px; height: 40px;
   display: grid; align-items: center; justify-content: center;
-  border: 1px solid #e5e7eb; background: white; border-radius: 0.2rem;
+  border: 1px solid #e5e7eb; background: white; border-radius: 50%;
   cursor: pointer;
 }
 .page-number.active { background: #000; color: white; border-color: #000; }

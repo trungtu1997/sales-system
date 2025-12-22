@@ -12,13 +12,13 @@
       <nav class="nav-menu">
         <ul>
           <li :class="{ active: $route.path === '/' }" @click="$router.push('/')" data-tooltip="Dashboard">
-            <i class='bx bxs-home-smile'></i>
-          </li>
-          <li :class="{ active: $route.path === '/analytics' }" @click="$router.push('/analytics')" data-tooltip="Analytics">
             <i class='bx bx-bar-chart-alt-2'></i>
           </li>
-          <li :class="{ active: $route.path === '/database' }" @click="$router.push('/database')" data-tooltip="Database">
-            <i class='bx bx-data'></i>
+          <li :class="{ active: $route.path === '/brands' }" @click="$router.push('/brands')" data-tooltip="Brands">
+            <i class='bx bx-tag-alt'></i>
+          </li>
+          <li :class="{ active: $route.path === '/categories' }" @click="$router.push('/categories')" data-tooltip="Categories">
+            <i class='bx bx-book'></i>
           </li>
           <li :class="{ active: $route.path === '/products' }" @click="$router.push('/products')" data-tooltip="Products">
             <i class='bx bx-shopping-bag'></i>
@@ -91,6 +91,8 @@ export default {
     getPageTitle() {
       if (this.$route.path === '/') return 'Dashboard Overview';
       if (this.$route.path === '/products') return 'Quản Lý Sản Phẩm';
+      if (this.$route.path === '/categories') return 'Quản Lý Danh Mục';
+      if (this.$route.path === '/brands') return 'Quản Lý Thương Hiệu';
       return 'Trang Quản Trị';
     }
   },
